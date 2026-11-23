@@ -98,9 +98,20 @@
 - **换行符由仓库的 `.gitattributes` 统一约束，不要再自行判断**：本仓库已声明
   `.gitattributes`（`* text=auto eol=lf`，二进制文件不转换，`.bat`/`.cmd` 保留 CRLF）
   与 `.editorconfig`（编辑器写 LF、UTF-8）。**仓库内属性优先于系统级 `core.autocrlf=true`**，
-  因此这是已解决的配置项：新建文件保持编辑器默认即可，不需要为迁就 Windows 改行尾，
-  也不需要动全局 `core.autocrlf`，更不要因为 diff 出现"整片改动"就重写文件或回退。
-  若发现某些文件仍被当作 CRLF 处理，先核对 `.gitattributes` 规则再下结论。
+  这是已解决的配置项：新建文件保持编辑器默认即可，不要为迁就 Windows 改行尾，
+  也不要动全局 `core.autocrlf`。
+- **已实测确认的 git 行为（2026-11-23 受控实验，勿凭直觉推翻）**：
+  - `* text=auto eol=lf` **确实**能让工作区也是 LF；只有 `text=auto`（不带 `eol`）时
+    才会被 `autocrlf=true` 转成 CRLF。规则本身有效，不需要加 `-text` 或改全局配置。
+  - **陷阱**：若文件的工作区字节是 CRLF，而它**规范化后与索引内容逐字节相同**，
+    git 会判定该文件"干净、无需检出"，于是 `git restore <路径>` 与
+    `git checkout -- <路径>` **都会成功返回但根本不重写文件**（表现为时间戳不变、`w/crlf` 依旧）。
+    这不是命令用错，也不是规则失效。判断依据是 `git hash-object <路径>` 与
+    `git rev-parse :<路径>` 返回**同一个哈希**。
+  - 因此：**不要为了修工作区行尾反复尝试 git 命令**（会白花时间且容易误判）。
+    仓库侧用 `git add --renormalize .` 即可；工作区侧若确实需要统一，
+    应停下来向用户说明，由用户决定（手工规范化或授权 `git restore`）。
+  - 修好后再用 `git ls-files --eol` 复核，目标是全部 `i/lf  w/lf`。
 - **注意中文路径显示**：仓库未设置 `core.quotepath`，非 ASCII 路径在 git 输出中会显示为
   `\344\270\255` 这类八进制转义，属正常现象，**不要据此认为文件名损坏**。
 - **一个已验证的环境限制**：PowerShell 中**用管道或变量捕获外部程序（`git.exe` 等）的输出可能被拒绝**，
@@ -169,12 +180,17 @@
 ## 仓库现状
 
 - 仓库内容：`README.md`（占位）、`AGENTS.md`（本文件）、`.gitattributes` 与 `.editorconfig`
-  （换行符与编辑器约定），以及 DSH 沙箱自动生成的 `.dsh-acl-recovery/` 目录。
-- **Git 事实**（2026-11-23 读取）：当前分支 `master`；只有一个提交 `16fa2b6 Initial commit`；
-  远程 `origin` = `git@github.com:leon-orz/Infinite-ai.git`（SSH）。
-- **版本控制范围**：`AGENTS.md` 已按用户决定**纳入版本控制**，`.gitattributes`、`.editorconfig`
-  同样纳管；`.dsh-acl-recovery/` 由工具链维护，**不删除、不重命名、不纳入版本控制**
-  （是否补 `.gitignore` 需先与用户确认，不要擅自建立或提交）。
+  （换行符与编辑器约定）、`.gitignore`（忽略 DSH 沙箱维护目录），
+  以及工具链自动生成但不纳管的 `.dsh-acl-recovery/` 目录。
+- **Git 事实**（2026-11-23 更新）：当前分支 `master`；历史为
+  `16fa2b6 Initial commit` → `c71409e docs: 纳入项目约定与换行符规范` →
+  `4fe2cec chore: 新增 .gitignore，忽略 DSH 沙箱维护的 .dsh-acl-recovery/`；
+  远程 `origin` = `git@github.com:leon-orz/Infinite-ai.git`（SSH）；**本地领先 origin/master，尚未推送**。
+- **版本控制范围**：`AGENTS.md` 已按用户决定**纳入版本控制**，`.gitattributes`、`.editorconfig`、
+  `.gitignore` 同样纳管；`.dsh-acl-recovery/` 由工具链维护，**不删除、不重命名、不纳入版本控制**
+  （已由 `.gitignore` 挡在 `git status` 之外）。
+- **行尾状态基线**：`git ls-files --eol` 应全部为 `i/lf  w/lf`（2026-11-23 已达成）；
+  若出现 `w/crlf`，先读「Windows 环境与终端规范」里的"已实测确认的 git 行为"，**不要盲目试命令**。
 - 提交时**显式列出路径**（如 `git add AGENTS.md .gitattributes .editorconfig`），
   不要使用 `git add -A` / `git add .`，避免把 `.dsh-acl-recovery/` 等无关内容一并带入。
 - 技术栈、构建命令、测试命令、目录结构约定尚未确定。等代码落地后，在本节补充：
