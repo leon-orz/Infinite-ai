@@ -51,6 +51,19 @@
    （`C:\Zone\1code\Infinite-ai`）内可写，越界操作会被拒绝或触发审批。
    被拒绝时**不要反复重试同一命令**，也不要把它当作程序 bug 去"修"；应如实报告被拒事实，
    说明为什么需要越界，由用户决定。
+7. **权限预设的语义（已核实，勿凭直觉理解）**：本会话的"权限预设" = **沙箱模式 + 审批策略** 两个旋钮的打包
+   （见 `@deepseek-ai/dsh-permission-presets`）。因此：
+   - DSH 的审批**只有一种用途——沙箱越界申请**（`sandbox_permissions` 升级），**没有独立的"危险操作识别层"**；
+   - 切到「完全权限」（`danger-full-access`）后**没有围栏、也就没有越界要申请**，审批入口根本不会触发：
+     破坏性命令（如批量删除、改写工作区外文件）会**静默执行，不会有任何弹窗**；
+   - `approval: never` 的语义是**"不问、直接拒绝"**，不是"不问、直接放行"，所以它更严而非更松；
+   - **唯一能保住"每次越界都有人把关"的做法，是留在 `workspace-write`**。需要连续多次 `git add`/`commit`
+     而嫌审批烦时，可临时切完全权限、做完立刻切回；**不要**把完全权限写进 profile 默认值。
+8. **`.git` 每次都要审批不是缺陷**：DSH 明确不做"自动发现仓库/git 目录"
+   （`@deepseek-ai/dsh-sandbox-policy` 的 `additionalWritableRoots` 文档：
+   *there is no automatic repository or gitfile discovery*），且 Windows 子进程隔离**忽略**额外可写根目录
+   （`--add-dir` 对它无效，git 是子进程）。已实测：`.git` 上的 ACL 修复对 `git add` 无效，
+   它属于**预期隔离**——**不要**再往"修 ACL"方向反复尝试。
 
 ## 能力与工具使用的汇报约定
 
@@ -182,10 +195,16 @@
 - 仓库内容：`README.md`（占位）、`AGENTS.md`（本文件）、`.gitattributes` 与 `.editorconfig`
   （换行符与编辑器约定）、`.gitignore`（忽略 DSH 沙箱维护目录），
   以及工具链自动生成但不纳管的 `.dsh-acl-recovery/` 目录。
-- **Git 事实**（2026-11-23 更新）：当前分支 `master`；历史为
+- **Git 事实**（2026-11-24 更新）：当前分支 `master`；历史为
   `16fa2b6 Initial commit` → `c71409e docs: 纳入项目约定与换行符规范` →
-  `4fe2cec chore: 新增 .gitignore，忽略 DSH 沙箱维护的 .dsh-acl-recovery/`；
-  远程 `origin` = `git@github.com:leon-orz/Infinite-ai.git`（SSH）；**本地领先 origin/master，尚未推送**。
+  `4fe2cec chore: 新增 .gitignore，忽略 DSH 沙箱维护的 .dsh-acl-recovery/` →
+  `99325d9 docs: 记录 git 换行符的实测行为与陷阱`；
+  远程 `origin` = `git@github.com:leon-orz/Infinite-ai.git`（SSH）；
+  **`99325d9` 已推送，本地与 `origin/master` 同步**（以 `git status -sb` 为准，不要照抄本节的历史快照）。
+- **提交信息规范**：采用 `类型: 中文简述` 的标题（常用 `feat`、`fix`、`docs`、`chore`、`refactor`、
+  `test`、`ci`、`build`、`perf`、`style`、`revert`），标题用中文、不加句号；
+  正文用中文分条写明**改了什么、为什么这么改**（必要处附依据）。
+  已推送的提交信息**不要**为了"更规范"而改写（`--amend` 是禁止项）。
 - **版本控制范围**：`AGENTS.md` 已按用户决定**纳入版本控制**，`.gitattributes`、`.editorconfig`、
   `.gitignore` 同样纳管；`.dsh-acl-recovery/` 由工具链维护，**不删除、不重命名、不纳入版本控制**
   （已由 `.gitignore` 挡在 `git status` 之外）。
