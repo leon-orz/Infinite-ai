@@ -1,0 +1,43 @@
+# 编辑器统一约定（与 .gitattributes 配合，但不替代它）
+#
+# 为什么需要这个文件：
+#   .gitattributes 管的是"文件进出 git 时"的换行符；本文件管的是"编辑器保存文件时"的行为。
+#   两者目标一致、层级不同：本文件负责在源头就把文件写对，减少 git 侧的转换与 diff 噪音。
+#   注意：本文件只对支持 EditorConfig 的编辑器生效（VS Code 需装 EditorConfig 扩展，
+#   部分编辑器如 JetBrains 系列、Vim、Sublime 已内置支持）。
+
+# 顶层约定：任何文件都不应越出这些边界
+root = true
+
+# 默认规则：UTF-8、LF、行尾留一个空行、去行尾空格
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+# Markdown 在行尾保留两个空格是有语义的（表示换行），因此不去除行尾空格
+[*.md]
+trim_trailing_whitespace = false
+
+# Windows 批处理脚本按 .gitattributes 保留 CRLF，这里保持一致
+[*.{bat,cmd}]
+end_of_line = crlf
+
+# 制表/缩进约定：当前技术栈未定，仅给出通用的 2 空格默认值；
+# 待技术栈确定后，按实际语言规范（如 Go 用 tab、Python 用 4 空格）在此细化。
+[*.{js,jsx,ts,tsx,json,jsonc,yml,yaml,css,scss,html,vue,svelte}]
+indent_style = space
+indent_size = 2
+
+[*.{py}]
+indent_style = space
+indent_size = 4
+
+[*.go]
+indent_style = tab
+
+# PowerShell 官方风格使用 4 空格
+[*.{ps1,psm1,psd1}]
+indent_style = space
+indent_size = 4

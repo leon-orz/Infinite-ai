@@ -1,0 +1,50 @@
+# 换行符与文本属性统一规则（由仓库维护，优先级高于全局 core.autocrlf）
+#
+# 为什么需要这个文件：
+#   本机 Git 在系统级配置里设了 core.autocrlf=true（见 C:/Program Files/Git/etc/gitconfig），
+#   它会把入库的文本按平台改写换行符，导致 diff 出现"整个文件都变了"的假改动，
+#   并且不同机器上 checkout 出来的换行符不一致。
+#   仓库内的 .gitattributes 优先级高于 core.autocrlf，因此在这里统一约定，
+#   无需修改任何全局配置（也就不影响使用者的其他仓库）。
+
+# 1) 默认：自动识别文本文件，并强制仓库内与工作区都用 LF
+#    这样 Linux/macOS/Windows 三端协作时，diff 与 git blame 都不受换行符干扰。
+* text=auto eol=lf
+
+# 2) Windows 批处理脚本必须保留 CRLF：
+#    cmd.exe 解析 .bat/.cmd 时对 LF 的容忍度有限，goto/label 在纯 LF 下可能异常。
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+# 3) 二进制文件：禁止任何换行符转换，避免文件被破坏
+*.png  binary
+*.jpg  binary
+*.jpeg binary
+*.gif  binary
+*.webp binary
+*.ico  binary
+*.pdf  binary
+*.zip  binary
+*.7z   binary
+*.gz   binary
+*.exe  binary
+*.dll  binary
+*.woff  binary
+*.woff2 binary
+*.ttf  binary
+*.eot  binary
+*.mp3  binary
+*.mp4  binary
+
+# 4) 明确按文本处理的特殊文件名（无扩展名，text=auto 可能判断不准）
+.gitattributes text eol=lf
+.gitignore     text eol=lf
+.editorconfig  text eol=lf
+
+# 5) 锁文件按文本处理，便于查看 diff（是否为文本由 text=auto 已覆盖，这里显式声明以防误判为二进制）
+package-lock.json  text eol=lf
+pnpm-lock.yaml     text eol=lf
+yarn.lock          text eol=lf
+
+# 6) 让 git diff 用更易读的方式展示 lockfile（不改内容，只影响 diff 呈现）
+#    （若将来 lockfile 变大再按需启用，避免现在引入额外行为）
